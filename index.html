@@ -10,15 +10,16 @@
     <title>Chromecast Volume Control</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="font-sans text-center bg-gray-100 text-gray-800 m-0 h-auto md:h-screen flex flex-col justify-center items-center">
-<div class="control-panel bg-white p-10 rounded-lg shadow-md w-4/5 max-w-600px text-left mx-auto">
-    <h1 class="text-3xl font-bold text-gray-800 mb-4">Chromecast Volume Control</h1>
-    <p class="text-base text-gray-600 mb-6 leading-relaxed">Manage the volume of your Chromecast-enabled devices and switch between your favorite streaming apps with ease.</p>
+<body class="font-sans bg-gray-100 text-gray-800 m-0 flex flex-col justify-center items-center p-2 md:p-4 lg:p-6 min-h-screen">
+<div class="control-panel bg-white p-4 md:p-6 lg:p-10 rounded-lg shadow-md w-full md:w-4/5 max-w-xl mx-auto overflow-auto">
+    <h1 class="text-xl md:text-3xl font-bold text-gray-800 mb-4">Chromecast Volume Control</h1>
+    <p class="text-base text-gray-600 mb-6 leading-relaxed">Manage the volume of your Chromecast-enabled devices and
+        switch between your favorite streaming apps with ease.</p>
 
     <div class="app-select-container mb-5">
         <label for="appSelect" class="block mb-2">Choose the app is playing on your device:</label>
         <select id="appSelect" required class="w-full p-2 rounded border border-gray-300 mt-1">
-        <option value="">Select an app</option>
+            <option value="">Select an app</option>
             <option value="CA5E8412">Netflix</option>
             <option value="233637DE">YouTube</option>
             <option value="2DB7CC49">YouTube Music</option>
@@ -45,7 +46,7 @@
         <span id="volumeValue" class="volume-value min-w-30px text-right">0</span>
     </div>
 </div>
-<div class="use-cases bg-gray-200 p-5 mt-8 rounded-lg shadow-md w-4/5 max-w-600px text-left">
+<div class="use-cases bg-gray-200 p-5 mt-8 rounded-lg shadow-md w-full md:w-4/5 max-w-xl mx-auto">
     <h2 class="text-2xl font-semibold text-gray-700">How Chromecast Volume Control Enhances Your Experience</h2>
     <p>Discover how users from various backgrounds use our app to streamline their media experience:</p>
     <ul class="list-disc ml-5">
@@ -85,10 +86,11 @@
             };
         };
         document.head.appendChild(script);
-    }else {
+    } else {
         console.error('Chromecast not supported in this browser.');
         displayCastSupportError();
     }
+
     function displayCastSupportError() {
         // Display an error message to the user
         alert("Sorry, Chromecast is not supported in your browser.");
@@ -97,6 +99,7 @@
         document.getElementById('castButton').disabled = true;
         document.getElementById('volumeControl').disabled = true;
     }
+
     function initializeCastApi() {
         const castContext = cast.framework.CastContext.getInstance();
         const appSelect = document.getElementById('appSelect');
@@ -117,7 +120,7 @@
                 // Update the options with the selected application ID
                 castContext.setOptions({
                     receiverApplicationId: selectedAppId,
-                    autoJoinPolicy: chrome.cast.AutoJoinPolicy.TAB_AND_ORIGIN_SCOPED,
+                    autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
                     resumeSavedSession: true
                 });
 
