@@ -3,129 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Control the volume and manage streaming apps on your Chromecast-enabled devices directly from your browser.">
+    <meta name="description"
+          content="Control the volume and manage streaming apps on your Chromecast-enabled devices directly from your browser.">
     <meta name="author" content="@SilviuStroe">
     <meta name="keywords" content="Google Cast, Chromecast, Volume Control, Streaming, Media Control">
     <title>Chromecast Volume Control</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
-            background-color: #f4f4f4;
-            color: #333;
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .control-panel {
-            background-color: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            width: 350px;
-            text-align: left;
-        }
-
-        h2 {
-            color: #4a4a4a;
-            margin-bottom: 30px;
-        }
-
-        #castButton {
-            background-color: #4285f4;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s;
-            display: block;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        #castButton:hover {
-            background-color: #3069c7;
-        }
-
-        .slider-container {
-            display: flex;
-            align-items: center;
-            margin-top: 20px;
-        }
-
-        .volume-label {
-            font-size: 16px;
-            color: #666;
-            margin-right: 10px;
-        }
-
-        #volumeControl {
-            flex-grow: 1;
-            margin-right: 10px;
-        }
-
-        .volume-value {
-            min-width: 30px;
-            text-align: right;
-        }
-
-        .app-select-container {
-            margin-bottom: 20px;
-        }
-
-        #appSelect {
-            width: 100%;
-            padding: 8px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            box-sizing: border-box;
-            margin-top: 5px;
-        }
-
-        .use-cases {
-            background-color: #f8f8f8;
-            padding: 20px;
-            margin-top: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            width: 80%;
-            max-width: 600px;
-            text-align: left;
-        }
-
-        .use-cases h2 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .use-cases ul {
-            list-style-type: disc;
-            margin-left: 20px;
-        }
-
-        .use-cases li {
-            margin-bottom: 10px;
-            color: #555;
-        }
-
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-<div class="control-panel">
-    <h1>Chromecast Volume Control</h1>
-    <p>Manage the volume of your Chromecast-enabled devices and switch between your favorite streaming apps with ease.</p>
+<body class="font-sans text-center bg-gray-100 text-gray-800 m-0 h-auto md:h-screen flex flex-col justify-center items-center">
+<div class="control-panel bg-white p-10 rounded-lg shadow-md w-4/5 max-w-600px text-left mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-4">Chromecast Volume Control</h1>
+    <p class="text-base text-gray-600 mb-6 leading-relaxed">Manage the volume of your Chromecast-enabled devices and switch between your favorite streaming apps with ease.</p>
 
-    <!-- Dropdown for selecting the app -->
-    <div class="app-select-container">
-        <label for="appSelect">Choose the app is playing on your device:</label>
-        <select id="appSelect" required>
-            <option value="">Select an app</option>
+    <div class="app-select-container mb-5">
+        <label for="appSelect" class="block mb-2">Choose the app is playing on your device:</label>
+        <select id="appSelect" required class="w-full p-2 rounded border border-gray-300 mt-1">
+        <option value="">Select an app</option>
             <option value="CA5E8412">Netflix</option>
             <option value="233637DE">YouTube</option>
             <option value="2DB7CC49">YouTube Music</option>
@@ -141,23 +34,39 @@
         </select>
     </div>
 
-    <button id="castButton">Connect to Device</button>
-    <div class="slider-container">
-        <span class="volume-label">Volume:</span>
-        <input type="range" id="volumeControl" min="0" max="100" step="1" disabled>
-        <span id="volumeValue" class="volume-value">0</span>
+    <button id="castButton"
+            class="bg-blue-600 text-white border-none py-2 px-4 rounded cursor-pointer text-lg transition-colors duration-300 block w-full box-border hover:bg-blue-700">
+        Connect to Device
+    </button>
+
+    <div class="slider-container flex items-center mt-5">
+        <span class="volume-label text-lg text-gray-600 mr-2">Volume:</span>
+        <input type="range" id="volumeControl" min="0" max="100" step="1" disabled class="flex-grow mr-2">
+        <span id="volumeValue" class="volume-value min-w-30px text-right">0</span>
     </div>
 </div>
-<div class="use-cases">
-    <h2>How Chromecast Volume Control Enhances Your Experience</h2>
+<div class="use-cases bg-gray-200 p-5 mt-8 rounded-lg shadow-md w-4/5 max-w-600px text-left">
+    <h2 class="text-2xl font-semibold text-gray-700">How Chromecast Volume Control Enhances Your Experience</h2>
     <p>Discover how users from various backgrounds use our app to streamline their media experience:</p>
-    <ul>
-        <li><strong>For Work and Play:</strong> Seamlessly adjust the volume during work-from-home sessions or while enjoying a movie night, all from your browser.</li>
-        <li><strong>Music Lovers:</strong> Effortlessly control the volume of your favorite Spotify playlists or YouTube Music tracks on your Chromecast-enabled devices.</li>
-        <li><strong>Party Hosts:</strong> Keep the party going by controlling the music volume on your Chromecast-enabled TV or speakers without missing a beat.</li>
-        <li><strong>Desktop Users:</strong> Desktop users, especially Mac users, can effortlessly control their Google Nest or other Chromecast-enabled devices directly from their browser.</li>
-        <li><strong>Accessibility:</strong> Those with mobility challenges can easily adjust device settings without needing to physically access them.</li>
-        <li><strong>Privacy First:</strong> This app operates without any backend servers and requires no installations, ensuring your data stays with you.</li>
+    <ul class="list-disc ml-5">
+        <li><strong>For Work and Play:</strong> Seamlessly adjust the volume during work-from-home sessions or while
+            enjoying a movie night, all from your browser.
+        </li>
+        <li><strong>Music Lovers:</strong> Effortlessly control the volume of your favorite Spotify playlists or YouTube
+            Music tracks on your Chromecast-enabled devices.
+        </li>
+        <li><strong>Party Hosts:</strong> Keep the party going by controlling the music volume on your
+            Chromecast-enabled TV or speakers without missing a beat.
+        </li>
+        <li><strong>Desktop Users:</strong> Desktop users, especially Mac users, can effortlessly control their Google
+            Nest or other Chromecast-enabled devices directly from their browser.
+        </li>
+        <li><strong>Accessibility:</strong> Those with mobility challenges can easily adjust device settings without
+            needing to physically access them.
+        </li>
+        <li><strong>Privacy First:</strong> This app operates without any backend servers and requires no installations,
+            ensuring your data stays with you.
+        </li>
     </ul>
 </div>
 <script>
@@ -165,9 +74,9 @@
     if (window.chrome && !window.chrome.cast) {
         const script = document.createElement('script');
         script.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
-        script.onload = function() {
+        script.onload = function () {
             // Wait for the SDK to be loaded
-            window['__onGCastApiAvailable'] = function(isAvailable) {
+            window['__onGCastApiAvailable'] = function (isAvailable) {
                 if (isAvailable) {
                     initializeCastApi();
                 } else {
@@ -176,45 +85,55 @@
             };
         };
         document.head.appendChild(script);
+    }else {
+        console.error('Chromecast not supported in this browser.');
+        displayCastSupportError();
     }
+    function displayCastSupportError() {
+        // Display an error message to the user
+        alert("Sorry, Chromecast is not supported in your browser.");
 
+        // Optionally, disable or hide Chromecast-related UI elements
+        document.getElementById('castButton').disabled = true;
+        document.getElementById('volumeControl').disabled = true;
+    }
     function initializeCastApi() {
-            const castContext = cast.framework.CastContext.getInstance();
-            const appSelect = document.getElementById('appSelect');
-            const castButton = document.getElementById('castButton');
+        const castContext = cast.framework.CastContext.getInstance();
+        const appSelect = document.getElementById('appSelect');
+        const castButton = document.getElementById('castButton');
 
-            // Load the saved app selection from localStorage
-            const savedAppId = localStorage.getItem('selectedAppId');
-            if (savedAppId) {
-                appSelect.value = savedAppId;
+        // Load the saved app selection from localStorage
+        const savedAppId = localStorage.getItem('selectedAppId');
+        if (savedAppId) {
+            appSelect.value = savedAppId;
+        }
+
+        castButton.addEventListener('click', () => {
+            const selectedAppId = appSelect.value;
+            if (selectedAppId) {
+                // Save the selected application ID to localStorage
+                localStorage.setItem('selectedAppId', selectedAppId);
+
+                // Update the options with the selected application ID
+                castContext.setOptions({
+                    receiverApplicationId: selectedAppId,
+                    autoJoinPolicy: chrome.cast.AutoJoinPolicy.TAB_AND_ORIGIN_SCOPED,
+                    resumeSavedSession: true
+                });
+
+                // Request a session
+                castContext.requestSession().then(
+                    () => console.log('Cast session started with app ID:', selectedAppId),
+                    (error) => console.error('Error starting Cast session:', error)
+                );
+            } else {
+                alert("Please select an app from the dropdown.");
             }
-
-            castButton.addEventListener('click', () => {
-                const selectedAppId = appSelect.value;
-                if (selectedAppId) {
-                    // Save the selected application ID to localStorage
-                    localStorage.setItem('selectedAppId', selectedAppId);
-
-                    // Update the options with the selected application ID
-                    castContext.setOptions({
-                        receiverApplicationId: selectedAppId,
-                        autoJoinPolicy: chrome.cast.AutoJoinPolicy.TAB_AND_ORIGIN_SCOPED,
-                        resumeSavedSession: true
-                    });
-
-                    // Request a session
-                    castContext.requestSession().then(
-                        () => console.log('Cast session started with app ID:', selectedAppId),
-                        (error) => console.error('Error starting Cast session:', error)
-                    );
-                } else {
-                    alert("Please select an app from the dropdown.");
-                }
-            });
+        });
 
         castContext.addEventListener(
             cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
-            function(event) {
+            function (event) {
                 switch (event.sessionState) {
                     case cast.framework.SessionState.SESSION_STARTED:
                     case cast.framework.SessionState.SESSION_RESUMED:
@@ -268,7 +187,7 @@
         }
     }
 
-    document.getElementById('volumeControl').addEventListener('input', function(event) {
+    document.getElementById('volumeControl').addEventListener('input', function (event) {
         adjustVolume(event.target.value);
         document.getElementById('volumeValue').textContent = event.target.value;
     });
