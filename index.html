@@ -7,7 +7,7 @@
           content="Control the volume and manage streaming apps on your Chromecast-enabled devices directly from your browser.">
     <meta name="author" content="@SilviuStroe">
     <meta name="keywords" content="Google Cast, Chromecast, Volume Control, Streaming, Media Control">
-    <meta name="google-site-verification" content="wByruZ2Gy-r5VEMOgQZdlt5XtB-3W1Oo1EiV3aFIviI" />
+    <meta name="google-site-verification" content="wByruZ2Gy-r5VEMOgQZdlt5XtB-3W1Oo1EiV3aFIviI"/>
     <title>Chromecast Volume Control</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
@@ -22,7 +22,7 @@
         switch between your favorite streaming apps with ease.</p>
 
     <div class="app-select-container mb-5">
-        <label for="appSelect" class="block mb-2">Choose the app is playing on your device:</label>
+        <label for="appSelect" class="block mb-2 font-bold">Choose the app is playing on your device:</label>
         <select id="appSelect" required class="w-full p-2 rounded border border-gray-300 mt-1">
             <option value="">Select an app</option>
             <option value="CC32E753">Spotify</option>
@@ -79,17 +79,21 @@
     <div class="container mx-auto px-4 py-5 text-center">
         <p class="mb-4">&copy; 2023 Chromecast Volume Control. All Rights Reserved.</p>
         <div class="flex justify-center space-x-4">
-            <a href="mailto:chef_04bolder@icloud.com?subject=Feedback on Chromecast Volume Control" class="text-blue-500 hover:underline">Send Feedback</a>
-            <a href="https://www.buymeacoffee.com/silviu" target="_blank" rel="noopener noreferrer" aria-label="Support me on Buy Me a Coffee" class="text-blue-500 hover:underline">
+            <a href="https://github.com/BrainicHQ/CastVolumeControl/issues/" target="_blank"
+               rel="noopener noreferrer"
+               class="text-blue-500 hover:underline">
+                🐛 Report a bug</a>
+            <a href="https://www.buymeacoffee.com/silviu" target="_blank" rel="noopener noreferrer"
+               aria-label="Support me on Buy Me a Coffee" class="text-blue-500 hover:underline">
                 ☕️ Support this project
             </a>
-            <a href="https://github.com/BrainicHQ/CastVolumeControl" target="_blank" rel="noopener noreferrer" aria-label="View on GitHub" class="text-blue-500 hover:underline">
+            <a href="https://github.com/BrainicHQ/CastVolumeControl" target="_blank" rel="noopener noreferrer"
+               aria-label="View on GitHub" class="text-blue-500 hover:underline">
                 🐙 GitHub
             </a>
         </div>
     </div>
 </footer>
-
 
 <script>
     // Import cast framework
@@ -97,7 +101,6 @@
         const script = document.createElement('script');
         script.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
         script.onload = function () {
-            // Wait for the SDK to be loaded
             window['__onGCastApiAvailable'] = function (isAvailable) {
                 if (isAvailable) {
                     initializeCastApi();
@@ -132,63 +135,78 @@
             appSelect.value = savedAppId;
         }
 
+        // Check for existing session immediately after API initialization
+        const existingSession = castContext.getCurrentSession();
+        if (existingSession) {
+            console.log('Existing session found, attaching to it');
+        } else {
+            // No existing session, set options for a new session
+            castContext.setOptions({
+                receiverApplicationId: savedAppId || chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+                autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+                resumeSavedSession: true
+            });
+        }
+
         castButton.addEventListener('click', () => {
-            const selectedAppId = appSelect.value;
-            if (selectedAppId) {
-                // Save the selected application ID to localStorage
-                localStorage.setItem('selectedAppId', selectedAppId);
+            const buttonText = castButton.textContent.trim();
 
-                // Update the options with the selected application ID
-                castContext.setOptions({
-                    receiverApplicationId: selectedAppId,
-                    autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
-                    resumeSavedSession: true
-                });
+            if (buttonText === 'Connect to Device') {
+                // Logic for connecting to a device
+                const selectedAppId = appSelect.value;
+                if (selectedAppId) {
+                    localStorage.setItem('selectedAppId', selectedAppId);
+                    castContext.setOptions({
+                        receiverApplicationId: selectedAppId,
+                        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+                        resumeSavedSession: true
+                    });
 
-                // Request a session
-                castContext.requestSession().then(
-                    () => console.log('Cast session started with app ID:', selectedAppId),
-                    (error) => console.error('Error starting Cast session:', error)
-                );
-            } else {
-                alert("Please select an app from the dropdown.");
+                    castContext.requestSession().then(
+                        () => console.log('Cast session started with app ID:', selectedAppId),
+                        (error) => console.error('Error starting Cast session:', error)
+                    );
+                } else {
+                    alert("Please select an app from the dropdown.");
+                }
+            } else if (buttonText === 'Disconnect') {
+                // Logic for disconnecting from a device
+                castContext.endCurrentSession(false);
+                console.log('Disconnected from the session');
             }
         });
+
 
         castContext.addEventListener(
             cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
             function (event) {
+                const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
+                const volumeControl = document.getElementById('volumeControl');
+
                 switch (event.sessionState) {
                     case cast.framework.SessionState.SESSION_STARTED:
                     case cast.framework.SessionState.SESSION_RESUMED:
                         console.log('Session started or resumed');
                         castButton.textContent = 'Disconnect';
-                        const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
 
-                        // Check if there's an existing media session
-                        if (castSession && castSession.getMediaSession()) {
-                            console.log('Existing media session found, attaching to it');
-                        } else {
-                            console.log('No existing media session, handle accordingly');
-                            // Handle the case where there's no existing media session
-                        }
-
-                        // Enable the volume control
-                        const volumeControl = document.getElementById('volumeControl');
+                        // Enable the volume control and update the volume value
                         volumeControl.disabled = false;
-
-                        // Get the current volume
-                        if (castSession) {
-                            const currentVolume = castSession.getVolume() * 100; // Convert to 0-100 range
+                        if (castSession && castSession.getMediaSession()) {
+                            const currentVolume = castSession.getVolume() * 100;
                             volumeControl.value = currentVolume;
-                            document.getElementById('volumeValue').textContent = currentVolume.toFixed(0); // Update the volume value display
+                            document.getElementById('volumeValue').textContent = currentVolume.toFixed(0);
+                        } else {
+                            console.log('No active media session found');
+                            alert("No active media session found. Please start playing media on your Chromecast device and try again.");
+                            castButton.textContent = 'Connect to Device';
+                            volumeControl.disabled = true;
                         }
                         break;
+
                     case cast.framework.SessionState.SESSION_ENDED:
                         console.log('Session ended');
-                        castButton.textContent = 'Connect to Device'; // Reset button label
-                        // Handle session end if necessary
-                        document.getElementById('volumeControl').disabled = true;
+                        castButton.textContent = 'Connect to Device';
+                        volumeControl.disabled = true;
                         break;
                 }
             }
@@ -218,10 +236,10 @@
 </script>
 <script>
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/service-worker.js').then(function (registration) {
                 console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            }, function(err) {
+            }, function (err) {
                 console.log('ServiceWorker registration failed: ', err);
             });
         });
