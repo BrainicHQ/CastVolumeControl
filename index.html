@@ -56,7 +56,6 @@
     <h1 class="text-xl md:text-3xl font-bold text-gray-800 mb-4">Chromecast Volume Control</h1>
     <p class="text-base text-gray-600 mb-6 leading-relaxed">Manage the volume of your Chromecast-enabled devices and
         switch between your favorite streaming apps with ease.</p>
-
     <div class="app-select-container mb-5">
         <label for="appSelect" class="block mb-2 font-bold">Choose the app is playing on your device:</label>
         <select id="appSelect" required class="w-full p-2 rounded border border-gray-300 mt-1">
@@ -228,7 +227,7 @@
 
                         // Enable the volume control and update the volume value
                         volumeControl.disabled = false;
-                        if (castSession && castSession.getMediaSession()) {
+                        if (castSession) {
                             const currentVolume = castSession.getVolume() * 100;
                             volumeControl.value = currentVolume;
                             document.getElementById('volumeValue').textContent = currentVolume.toFixed(0);
