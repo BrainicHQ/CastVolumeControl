@@ -205,7 +205,10 @@
                         (error) => console.error('Error starting Cast session:', error)
                     );
                 } else {
-                    alert("Please select an app from the dropdown.");
+                    alert("Please select an app that is playing on your Chromecast-enabled device.");
+                    // Focus the dropdown for the user to select an app
+                    appSelect.focus();
+
                 }
             } else if (buttonText === 'Disconnect') {
                 // Logic for disconnecting from a device
@@ -271,6 +274,16 @@
         adjustVolume(event.target.value);
         document.getElementById('volumeValue').textContent = event.target.value;
     });
+
+    // Check periodically if someone from the household changed the volume and update the slider accordingly
+    setInterval(() => {
+        const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
+        if (castSession) {
+            const currentVolume = castSession.getVolume() * 100; // Convert to a percentage
+            document.getElementById('volumeControl').value = currentVolume; // Update the slider
+            document.getElementById('volumeValue').textContent = currentVolume.toFixed(0); // Update the value display
+        }
+    }, 5000); // 5 seconds
 </script>
 <script>
     if ('serviceWorker' in navigator) {
