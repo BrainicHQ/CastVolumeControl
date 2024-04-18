@@ -88,6 +88,10 @@
         <input type="range" id="volumeControl" min="0" max="100" step="1" disabled class="flex-grow mr-2">
         <span id="volumeValue" class="volume-value min-w-30px text-right">0</span>
     </div>
+    <button id="stopButton" style="display: none"
+            class="mt-5 bg-red-600 text-white border-none py-2 px-4 rounded cursor-pointer text-lg transition-colors duration-300 block w-50 box-border hover:bg-red-700">
+        Stop Media
+    </button>
 </div>
 <div class="use-cases bg-gray-200 p-5 mt-8 rounded-lg shadow-md w-full md:w-4/5 max-w-xl mx-auto">
     <h2 class="text-2xl font-semibold text-gray-700">How Chromecast Volume Control Enhances Your Experience</h2>
@@ -252,6 +256,19 @@
                 }
             }
         );
+
+        castContext.addEventListener(
+            cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+            function (event) {
+                const stopButton = document.getElementById('stopButton');
+                if (event.sessionState === cast.framework.SessionState.SESSION_STARTED ||
+                    event.sessionState === cast.framework.SessionState.SESSION_RESUMED) {
+                    stopButton.style.display = 'block';
+                } else {
+                    stopButton.style.display = 'none';
+                }
+            }
+        );
     }
 
 
@@ -284,6 +301,21 @@
             document.getElementById('volumeValue').textContent = currentVolume.toFixed(0); // Update the value display
         }
     }, 5000); // 5 seconds
+
+    // Event listener for stop button click
+    document.getElementById('stopButton').addEventListener('click', stopMedia);
+
+    function stopMedia() {
+        const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
+        if (castSession) {
+            castSession.endSession(true);
+            document.getElementById('stopButton').style.display = 'none';
+            console.log('Media stopped');
+        } else {
+            console.log('No active Cast session');
+        }
+    }
+
 </script>
 <script>
     if ('serviceWorker' in navigator) {
