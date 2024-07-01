@@ -9,7 +9,7 @@
     <meta name="keywords" content="Google Cast, Chromecast, Volume Control, Streaming, Media Control">
     <meta name="google-site-verification" content="wByruZ2Gy-r5VEMOgQZdlt5XtB-3W1Oo1EiV3aFIviI"/>
     <title>Chromecast Volume Control</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" sizes="180x180" href="favicons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicons/favicon-32x32.png">
@@ -122,22 +122,21 @@
     <div class="container mx-auto px-4 py-5 text-center">
         <p class="mb-4">&copy; 2023 Chromecast Volume Control. All Rights Reserved.</p>
         <div class="flex justify-center space-x-4">
-            <a href="https://github.com/BrainicHQ/CastVolumeControl/issues/" target="_blank"
-               rel="noopener noreferrer"
-               class="text-blue-500 hover:underline">
-                🐛 Report a bug</a>
+            <a rel="noopener noreferrer" class="github-button" href="https://github.com/BrainicHQ/CastVolumeControl"
+               data-color-scheme="no-preference: light; light: light; dark: dark;" data-show-count="true"
+               aria-label="Star BrainicHQ/CastVolumeControl on GitHub">Star on GitHub</a>
             <a href="https://www.buymeacoffee.com/silviu" target="_blank" rel="noopener noreferrer"
                aria-label="Support me on Buy Me a Coffee" class="text-blue-500 hover:underline">
                 ☕️ Support this project
             </a>
-            <a href="https://github.com/BrainicHQ/CastVolumeControl" target="_blank" rel="noopener noreferrer"
-               aria-label="View on GitHub" class="text-blue-500 hover:underline">
-                🐙 GitHub
-            </a>
+            <a class="github-button" href="https://github.com/BrainicHQ/CastVolumeControl/issues"
+               data-color-scheme="no-preference: light; light: light; dark: dark;" data-icon="octicon-issue-opened"
+               data-show-count="true" aria-label="Issue BrainicHQ/CastVolumeControl on GitHub">Report Issue 🐛</a>
         </div>
     </div>
 </footer>
 
+<script async defer src="https://buttons.github.io/buttons.js"></script>
 <script>
     // Import cast framework
     if (window.chrome && !window.chrome.cast) {
