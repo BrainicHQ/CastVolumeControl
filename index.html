@@ -51,14 +51,17 @@
         }
     </script>
 </head>
-<body class="font-sans bg-gray-100 text-gray-800 m-0 flex flex-col justify-center items-center p-2 md:p-4 lg:p-6 min-h-screen">
-<div class="control-panel bg-white p-4 md:p-6 lg:p-10 rounded-lg shadow-md w-full md:w-4/5 max-w-xl mx-auto overflow-auto">
-    <h1 class="text-xl md:text-3xl font-bold text-gray-800 mb-4">Chromecast Volume Control</h1>
-    <p class="text-base text-gray-600 mb-6 leading-relaxed">Manage the volume of your Chromecast-enabled devices and
-        switch between your favorite streaming apps with ease.</p>
+<body class="font-sans bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 m-0 flex flex-col justify-center items-center p-2 md:p-4 lg:p-6 min-h-screen">
+<div class="control-panel bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-10 rounded-lg shadow-md w-full md:w-4/5 max-w-xl mx-auto overflow-auto">
+    <h1 class="text-xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4">Chromecast Volume Control</h1>
+    <p class="text-base text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+        Manage the volume of your Chromecast-enabled devices and switch between your favorite streaming apps with ease.
+    </p>
     <div class="app-select-container mb-5">
-        <label for="appSelect" class="block mb-2 font-bold">Choose the app is playing on your device:</label>
-        <select id="appSelect" required class="w-full p-2 rounded border border-gray-300 mt-1">
+        <label for="appSelect" class="block mb-2 font-bold dark:text-gray-100">Choose the app is playing on your
+            device:</label>
+        <select id="appSelect" required
+                class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 mt-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
             <option value="">Select an app</option>
             <option value="CC32E753">Spotify</option>
             <option value="2DB7CC49">YouTube Music</option>
@@ -80,45 +83,46 @@
         </select>
     </div>
     <button id="castButton"
-            class="bg-blue-600 text-white border-none py-2 px-4 rounded cursor-pointer text-lg transition-colors duration-300 block w-full box-border hover:bg-blue-700">
+            class="bg-blue-600 dark:bg-blue-700 text-white border-none py-2 px-4 rounded cursor-pointer text-lg transition-colors duration-300 block w-full box-border hover:bg-blue-700 dark:hover:bg-blue-800">
         Connect to Device
     </button>
 
     <div class="slider-container flex items-center mt-5">
-        <span class="volume-label text-lg text-gray-600 mr-2">Volume:</span>
+        <span class="volume-label text-lg text-gray-600 dark:text-gray-300 mr-2">Volume:</span>
         <input type="range" id="volumeControl" min="0" max="100" step="1" disabled class="flex-grow mr-2">
         <span id="volumeValue" class="volume-value min-w-30px text-right">0</span>
     </div>
     <button id="stopButton" style="display: none"
-            class="mt-5 bg-red-600 text-white border-none py-2 px-4 rounded cursor-pointer text-lg transition-colors duration-300 block w-50 box-border hover:bg-red-700">
+            class="mt-5 bg-red-600 dark:bg-red-700 text-white border-none py-2 px-4 rounded cursor-pointer text-lg transition-colors duration-300 block w-50 box-border hover:bg-red-700 dark:hover:bg-red-800">
         Stop Media
     </button>
 </div>
-<div class="use-cases bg-gray-200 p-5 mt-8 rounded-lg shadow-md w-full md:w-4/5 max-w-xl mx-auto">
-    <h2 class="text-2xl font-semibold text-gray-700">How Chromecast Volume Control Enhances Your Experience</h2>
+<div class="use-cases bg-gray-200 dark:bg-gray-800 p-5 mt-8 rounded-lg shadow-md w-full md:w-4/5 max-w-xl mx-auto">
+    <h2 class="text-2xl font-semibold text-gray-700 dark:text-gray-100">How Chromecast Volume Control Enhances Your
+        Experience</h2>
     <p>Discover how users from various backgrounds use our app to streamline their media experience:</p>
     <ul class="list-disc ml-5">
-        <li><strong>For Work and Play:</strong> Seamlessly adjust the volume during work-from-home sessions or while
-            enjoying a movie night, all from your browser.
+        <li class="dark:text-gray-300"><strong>For Work and Play:</strong> Seamlessly adjust the volume during
+            work-from-home sessions or while enjoying a movie night, all from your browser.
         </li>
-        <li><strong>Music Lovers:</strong> Effortlessly control the volume of your favorite Spotify playlists or YouTube
-            Music tracks on your Chromecast-enabled devices.
+        <li class="dark:text-gray-300"><strong>Music Lovers:</strong> Effortlessly control the volume of your favorite
+            Spotify playlists or YouTube Music tracks on your Chromecast-enabled devices.
         </li>
-        <li><strong>Party Hosts:</strong> Keep the party going by controlling the music volume on your
-            Chromecast-enabled TV or speakers without missing a beat.
+        <li class="dark:text-gray-300"><strong>Party Hosts:</strong> Keep the party going by controlling the music
+            volume on your Chromecast-enabled TV or speakers without missing a beat.
         </li>
-        <li><strong>Desktop Users:</strong> Desktop users, can effortlessly control their Google
-            Nest or other Chromecast-enabled devices directly from their browser.
+        <li class="dark:text-gray-300"><strong>Desktop Users:</strong> Desktop users can effortlessly control their
+            Google Nest or other Chromecast-enabled devices directly from their browser.
         </li>
-        <li><strong>Accessibility:</strong> Those with mobility challenges can easily adjust device settings without
-            needing to physically access them.
+        <li class="dark:text-gray-300"><strong>Accessibility:</strong> Those with mobility challenges can easily adjust
+            device settings without needing to physically access them.
         </li>
-        <li><strong>Privacy First:</strong> This app operates without any backend servers and requires no installations,
-            ensuring your data stays with you.
+        <li class="dark:text-gray-300"><strong>Privacy First:</strong> This app operates without any backend servers and
+            requires no installations, ensuring your data stays with you.
         </li>
     </ul>
 </div>
-<footer class="bg-gray-100 text-gray-800 my-2">
+<footer class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 my-2">
     <div class="container mx-auto px-4 py-5 text-center">
         <p class="mb-4">&copy; 2023 Chromecast Volume Control. All Rights Reserved.</p>
         <div class="flex justify-center space-x-4">
@@ -126,9 +130,8 @@
                data-color-scheme="no-preference: light; light: light; dark: dark;" data-show-count="true"
                aria-label="Star BrainicHQ/CastVolumeControl on GitHub">Star on GitHub</a>
             <a href="https://www.buymeacoffee.com/silviu" target="_blank" rel="noopener noreferrer"
-               aria-label="Support me on Buy Me a Coffee" class="text-blue-500 hover:underline">
-                ☕️ Support this project
-            </a>
+               aria-label="Support me on Buy Me a Coffee" class="text-blue-500 dark:text-blue-400 hover:underline">☕️
+                Support this project</a>
             <a class="github-button" href="https://github.com/BrainicHQ/CastVolumeControl/issues"
                data-color-scheme="no-preference: light; light: light; dark: dark;" data-icon="octicon-issue-opened"
                data-show-count="true" aria-label="Issue BrainicHQ/CastVolumeControl on GitHub">Report Issue 🐛</a>
