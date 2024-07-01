@@ -293,16 +293,6 @@
         document.getElementById('volumeValue').textContent = event.target.value;
     });
 
-    // Check periodically if someone from the household changed the volume and update the slider accordingly
-    setInterval(() => {
-        const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
-        if (castSession) {
-            const currentVolume = castSession.getVolume() * 100; // Convert to a percentage
-            document.getElementById('volumeControl').value = currentVolume; // Update the slider
-            document.getElementById('volumeValue').textContent = currentVolume.toFixed(0); // Update the value display
-        }
-    }, 5000); // 5 seconds
-
     // Event listener for stop button click
     document.getElementById('stopButton').addEventListener('click', stopMedia);
 
