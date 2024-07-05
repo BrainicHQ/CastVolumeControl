@@ -53,12 +53,12 @@
 </head>
 <body class="font-sans bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 m-0 flex flex-col justify-center items-center p-2 md:p-4 lg:p-6 min-h-screen">
 <div class="control-panel bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-10 rounded-lg shadow-md w-full md:w-4/5 max-w-xl mx-auto overflow-auto">
-    <h1 class="text-xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4">Chromecast Volume Control</h1>
+    <h1 class="text-xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">Chromecast Volume Control</h1>
     <p class="text-base text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
         Manage the volume of your Chromecast-enabled devices and switch between your favorite streaming apps with ease.
     </p>
-    <div class="app-select-container mb-5">
-        <label for="appSelect" class="block mb-2 font-bold dark:text-gray-100">Choose the app is playing on your
+    <div class="app-select-container mb-6">
+        <label for="appSelect" class="block mb-2 font-bold dark:text-gray-100">Choose the app playing on your
             device:</label>
         <select id="appSelect" required
                 class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 mt-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
@@ -82,20 +82,27 @@
             <option value="CC1AD845">Default Media Receiver</option>
         </select>
     </div>
-    <button id="castButton"
-            class="bg-blue-600 dark:bg-blue-700 text-white border-none py-2 px-4 rounded cursor-pointer text-lg transition-colors duration-300 block w-full box-border hover:bg-blue-700 dark:hover:bg-blue-800">
-        Connect to Device
-    </button>
-
-    <div class="slider-container flex items-center mt-5">
-        <span class="volume-label text-lg text-gray-600 dark:text-gray-300 mr-2">Volume:</span>
-        <input type="range" id="volumeControl" min="0" max="100" step="1" disabled class="flex-grow mr-2">
-        <span id="volumeValue" class="volume-value min-w-30px text-right">0</span>
+    <div class="flex justify-between items-center mb-6">
+        <button id="castButton"
+                class="bg-blue-600 dark:bg-blue-700 text-white py-2 px-4 rounded cursor-pointer text-lg transition-colors duration-300 w-1/2 mr-2 hover:bg-blue-700 dark:hover:bg-blue-800">
+            Connect to Device
+        </button>
+        <button id="stopButton" style="display: none"
+                class="bg-red-600 dark:bg-red-700 text-white py-2 px-4 rounded cursor-pointer text-lg transition-colors duration-300 w-1/2 ml-2 hover:bg-red-700 dark:hover:bg-red-800">
+            Stop Media
+        </button>
     </div>
-    <button id="stopButton" style="display: none"
-            class="mt-5 bg-red-600 dark:bg-red-700 text-white border-none py-2 px-4 rounded cursor-pointer text-lg transition-colors duration-300 block w-50 box-border hover:bg-red-700 dark:hover:bg-red-800">
-        Stop Media
-    </button>
+    <div class="volume-container mb-6">
+        <label for="volumeControl" class="block text-lg text-gray-600 dark:text-gray-300 mb-2">Volume:</label>
+        <div class="slider-container flex items-center">
+            <input type="range" id="volumeControl" min="0" max="100" step="1" disabled class="flex-grow mr-2">
+            <span id="volumeValue" class="volume-value text-lg text-gray-800 dark:text-gray-200">0</span>
+        </div>
+    </div>
+    <div class="media-info">
+        <h3 id="mediaTitle" class="text-lg font-bold text-gray-700 dark:text-white mb-2"></h3>
+        <img id="mediaImage" src="#" alt="Media Thumbnail" class="hidden rounded-lg w-full md:w-48 h-auto object-cover">
+    </div>
 </div>
 <div class="use-cases bg-gray-200 dark:bg-gray-800 p-5 mt-8 rounded-lg shadow-md w-full md:w-4/5 max-w-xl mx-auto">
     <h2 class="text-2xl font-semibold text-gray-700 dark:text-gray-100">How Chromecast Volume Control Enhances Your
@@ -228,50 +235,59 @@
         castContext.addEventListener(
             cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
             function (event) {
-                const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
-                const volumeControl = document.getElementById('volumeControl');
-
+                const stopButton = document.getElementById('stopButton');
                 switch (event.sessionState) {
                     case cast.framework.SessionState.SESSION_STARTED:
                     case cast.framework.SessionState.SESSION_RESUMED:
                         console.log('Session started or resumed');
                         castButton.textContent = 'Disconnect';
+                        stopButton.style.display = 'block';  // Ensure the button is displayed when a session starts or resumes
 
-                        // Enable the volume control and update the volume value
-                        volumeControl.disabled = false;
+                        const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
                         if (castSession) {
+                            updateMediaInformation(castSession.getMediaSession());
                             const currentVolume = castSession.getVolume() * 100;
-                            volumeControl.value = currentVolume;
+                            document.getElementById('volumeControl').value = currentVolume;
                             document.getElementById('volumeValue').textContent = currentVolume.toFixed(0);
+                            document.getElementById('volumeControl').disabled = false;
                         } else {
                             console.log('No active media session found');
                             alert("No active media session found. Please start playing media on your Chromecast device and try again.");
                             castButton.textContent = 'Connect to Device';
-                            volumeControl.disabled = true;
+                            document.getElementById('volumeControl').disabled = true;
+                            stopButton.style.display = 'none';  // Hide if no session is active
                         }
                         break;
 
                     case cast.framework.SessionState.SESSION_ENDED:
-                        console.log('Session ended');
+                    case cast.framework.SessionState.NO_SESSION:
+                        console.log('Session ended or no session available');
                         castButton.textContent = 'Connect to Device';
-                        volumeControl.disabled = true;
+                        document.getElementById('volumeControl').disabled = true;
+                        stopButton.style.display = 'none';  // Hide when the session ends
                         break;
                 }
             }
         );
+    }
 
-        castContext.addEventListener(
-            cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
-            function (event) {
-                const stopButton = document.getElementById('stopButton');
-                if (event.sessionState === cast.framework.SessionState.SESSION_STARTED ||
-                    event.sessionState === cast.framework.SessionState.SESSION_RESUMED) {
-                    stopButton.style.display = 'block';
-                } else {
-                    stopButton.style.display = 'none';
-                }
+    function updateMediaInformation(mediaSession) {
+        const mediaTitle = document.getElementById('mediaTitle');
+        const mediaImage = document.getElementById('mediaImage');
+
+        if (mediaSession && mediaSession.media && mediaSession.media.metadata) {
+            mediaTitle.textContent = mediaSession.media.metadata.title || 'Unknown Title';
+
+            if (mediaSession.media.metadata.images && mediaSession.media.metadata.images.length > 0) {
+                mediaImage.src = mediaSession.media.metadata.images[0].url;
+                mediaImage.classList.remove('hidden'); // Remove hidden class to show image
+            } else {
+                mediaImage.classList.add('hidden'); // Add hidden class to hide image
             }
-        );
+        } else {
+            mediaTitle.textContent = 'No media information';
+            mediaImage.classList.add('hidden');
+        }
     }
 
 
