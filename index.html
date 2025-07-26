@@ -95,9 +95,13 @@
     <div class="volume-container mb-6">
         <label for="volumeControl" class="block text-lg text-gray-600 dark:text-gray-300 mb-2">Volume:</label>
         <div class="slider-container flex items-center">
-            <input type="range" id="volumeControl" min="0" max="100" step="1" disabled class="flex-grow mr-2">
-            <span id="volumeValue" class="volume-value text-lg text-gray-800 dark:text-gray-200">0</span>
+            <button id="muteButton" disabled class="bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 py-2 px-3 rounded mr-2 hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-300">🔊</button>
+            <input type="range" id="volumeControl" min="0" max="100" step="1" disabled class="flex-grow mr-2 accent-blue-600">
+            <span id="volumeValue" class="volume-value text-lg text-gray-800 dark:text-gray-200 min-w-[3ch]">0</span>
         </div>
+    </div>
+    <div id="connectionStatus" class="mb-4 p-3 rounded-lg text-center hidden">
+        <span id="statusText" class="font-medium"></span>
     </div>
     <div class="media-info">
         <h3 id="mediaTitle" class="text-lg font-bold text-gray-700 dark:text-white mb-2"></h3>
@@ -148,183 +152,717 @@
 
 <script async defer src="https://buttons.github.io/buttons.js"></script>
 <script>
-    // Import cast framework
-    if (window.chrome && !window.chrome.cast) {
-        const script = document.createElement('script');
-        script.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
-        script.onload = function () {
-            window['__onGCastApiAvailable'] = function (isAvailable) {
-                if (isAvailable) {
-                    initializeCastApi();
-                } else {
-                    console.error('Google Cast SDK not available.');
-                }
+    class CastVolumeController {
+        constructor() {
+            this.castContext = null;
+            this.currentSession = null;
+            this.reconnectAttempts = 0;
+            this.maxReconnectAttempts = 5;
+            this.reconnectDelay = 2000;
+            this.heartbeatInterval = null;
+            this.volumeSyncInterval = null;
+            this.isConnecting = false;
+            this.connectionState = 'disconnected';
+            
+            this.elements = {
+                appSelect: null,
+                castButton: null,
+                stopButton: null,
+                volumeControl: null,
+                volumeValue: null,
+                muteButton: null,
+                connectionStatus: null,
+                statusText: null,
+                mediaTitle: null,
+                mediaImage: null
             };
-        };
-        document.head.appendChild(script);
-    } else {
-        console.error('Chromecast not supported in this browser.');
-        displayCastSupportError();
-    }
-
-    function displayCastSupportError() {
-        // Display an error message to the user
-        alert("Sorry, Chromecast is not supported in your browser.");
-
-        // Optionally, disable or hide Chromecast-related UI elements
-        document.getElementById('castButton').disabled = true;
-        document.getElementById('volumeControl').disabled = true;
-    }
-
-    function initializeCastApi() {
-        const castContext = cast.framework.CastContext.getInstance();
-        const appSelect = document.getElementById('appSelect');
-        const castButton = document.getElementById('castButton');
-
-        // Load the saved app selection from localStorage
-        const savedAppId = localStorage.getItem('selectedAppId');
-        if (savedAppId) {
-            appSelect.value = savedAppId;
+            
+            this.lastVolume = 50;
+            this.isMuted = false;
+            
+            this.init();
         }
-
-        // Check for existing session immediately after API initialization
-        const existingSession = castContext.getCurrentSession();
-        if (existingSession) {
-            console.log('Existing session found, attaching to it');
-        } else {
-            // No existing session, set options for a new session
-            castContext.setOptions({
-                receiverApplicationId: savedAppId || chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
-                autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
-                resumeSavedSession: true
-            });
+        
+        init() {
+            this.initializeElements();
+            this.loadCastFramework();
+            this.setupEventListeners();
+            this.restoreState();
         }
-
-        castButton.addEventListener('click', () => {
-            const buttonText = castButton.textContent.trim();
-
-            if (buttonText === 'Connect to Device') {
-                // Logic for connecting to a device
-                const selectedAppId = appSelect.value;
-                if (selectedAppId) {
-                    localStorage.setItem('selectedAppId', selectedAppId);
-                    castContext.setOptions({
-                        receiverApplicationId: selectedAppId,
-                        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
-                        resumeSavedSession: true
-                    });
-
-                    castContext.requestSession().then(
-                        () => console.log('Cast session started with app ID:', selectedAppId),
-                        (error) => console.error('Error starting Cast session:', error)
-                    );
-                } else {
-                    alert("Please select an app that is playing on your Chromecast-enabled device.");
-                    // Focus the dropdown for the user to select an app
-                    appSelect.focus();
-
-                }
-            } else if (buttonText === 'Disconnect') {
-                // Logic for disconnecting from a device
-                castContext.endCurrentSession(false);
-                console.log('Disconnected from the session');
-            }
-        });
-
-
-        castContext.addEventListener(
-            cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
-            function (event) {
-                const stopButton = document.getElementById('stopButton');
-                switch (event.sessionState) {
-                    case cast.framework.SessionState.SESSION_STARTED:
-                    case cast.framework.SessionState.SESSION_RESUMED:
-                        console.log('Session started or resumed');
-                        castButton.textContent = 'Disconnect';
-                        stopButton.style.display = 'block';  // Ensure the button is displayed when a session starts or resumes
-
-                        const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
-                        if (castSession) {
-                            updateMediaInformation(castSession.getMediaSession());
-                            const currentVolume = castSession.getVolume() * 100;
-                            document.getElementById('volumeControl').value = currentVolume;
-                            document.getElementById('volumeValue').textContent = currentVolume.toFixed(0);
-                            document.getElementById('volumeControl').disabled = false;
+        
+        initializeElements() {
+            this.elements.appSelect = document.getElementById('appSelect');
+            this.elements.castButton = document.getElementById('castButton');
+            this.elements.stopButton = document.getElementById('stopButton');
+            this.elements.volumeControl = document.getElementById('volumeControl');
+            this.elements.volumeValue = document.getElementById('volumeValue');
+            this.elements.muteButton = document.getElementById('muteButton');
+            this.elements.connectionStatus = document.getElementById('connectionStatus');
+            this.elements.statusText = document.getElementById('statusText');
+            this.elements.mediaTitle = document.getElementById('mediaTitle');
+            this.elements.mediaImage = document.getElementById('mediaImage');
+        }
+        
+        loadCastFramework() {
+            if (window.chrome && !window.chrome.cast) {
+                const script = document.createElement('script');
+                script.src = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1';
+                script.onload = () => {
+                    window['__onGCastApiAvailable'] = (isAvailable) => {
+                        if (isAvailable) {
+                            this.initializeCastApi();
                         } else {
-                            console.log('No active media session found');
-                            alert("No active media session found. Please start playing media on your Chromecast device and try again.");
-                            castButton.textContent = 'Connect to Device';
-                            document.getElementById('volumeControl').disabled = true;
-                            stopButton.style.display = 'none';  // Hide if no session is active
+                            this.handleCastUnavailable();
                         }
-                        break;
-
-                    case cast.framework.SessionState.SESSION_ENDED:
-                    case cast.framework.SessionState.NO_SESSION:
-                        console.log('Session ended or no session available');
-                        castButton.textContent = 'Connect to Device';
-                        document.getElementById('volumeControl').disabled = true;
-                        stopButton.style.display = 'none';  // Hide when the session ends
-                        break;
+                    };
+                };
+                script.onerror = () => this.handleCastUnavailable();
+                document.head.appendChild(script);
+            } else if (window.chrome && window.chrome.cast) {
+                this.initializeCastApi();
+            } else {
+                this.handleCastUnavailable();
+            }
+        }
+        
+        handleCastUnavailable() {
+            console.error('Google Cast SDK not available');
+            this.showNotification('Chromecast is not supported in this browser', 'error');
+            this.elements.castButton.disabled = true;
+            this.elements.volumeControl.disabled = true;
+        }
+        
+        async initializeCastApi() {
+            try {
+                this.castContext = cast.framework.CastContext.getInstance();
+                
+                const savedAppId = localStorage.getItem('selectedAppId');
+                if (savedAppId) {
+                    this.elements.appSelect.value = savedAppId;
+                }
+                
+                this.castContext.setOptions({
+                    receiverApplicationId: savedAppId || chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+                    autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+                    resumeSavedSession: true
+                });
+                
+                this.castContext.addEventListener(
+                    cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+                    (event) => this.handleSessionStateChanged(event)
+                );
+                
+                this.castContext.addEventListener(
+                    cast.framework.CastContextEventType.CAST_STATE_CHANGED,
+                    (event) => this.handleCastStateChanged(event)
+                );
+                
+                // Wait a moment for the Cast SDK to fully initialize
+                await this.delay(500);
+                
+                // Check for existing session and resume without interrupting playback
+                const existingSession = this.castContext.getCurrentSession();
+                if (existingSession) {
+                    console.log('Existing session found, resuming without interruption...');
+                    this.attachToSession(existingSession);
+                    this.updateConnectionState('connected');
+                    this.elements.castButton.textContent = 'Disconnect';
+                    this.elements.stopButton.style.display = 'block';
+                } else {
+                    console.log('No existing session found');
+                }
+                
+                this.startHeartbeat();
+                console.log('Cast API initialized successfully');
+                
+            } catch (error) {
+                console.error('Failed to initialize Cast API:', error);
+                this.showNotification('Failed to initialize Chromecast', 'error');
+            }
+        }
+        
+        setupEventListeners() {
+            this.elements.castButton.addEventListener('click', () => this.handleCastButtonClick());
+            this.elements.stopButton.addEventListener('click', () => this.stopMedia());
+            this.elements.volumeControl.addEventListener('input', (event) => this.handleVolumeChange(event));
+            this.elements.muteButton.addEventListener('click', () => this.toggleMute());
+            
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    this.refreshSession();
+                }
+            });
+            
+            window.addEventListener('online', () => this.handleNetworkOnline());
+            window.addEventListener('offline', () => this.handleNetworkOffline());
+        }
+        
+        restoreState() {
+            const savedVolume = localStorage.getItem('lastVolume');
+            if (savedVolume) {
+                this.elements.volumeControl.value = savedVolume;
+                this.elements.volumeValue.textContent = savedVolume;
+            }
+        }
+        
+        async handleCastButtonClick() {
+            if (this.isConnecting) {
+                this.showNotification('Connection in progress...', 'info');
+                return;
+            }
+            
+            const buttonText = this.elements.castButton.textContent.trim();
+            
+            if (buttonText === 'Connect to Device') {
+                await this.connectToDevice();
+            } else if (buttonText === 'Disconnect') {
+                this.disconnectFromDevice();
+            }
+        }
+        
+        async connectToDevice() {
+            const selectedAppId = this.elements.appSelect.value;
+            if (!selectedAppId) {
+                this.showNotification('Please select an app first', 'warning');
+                this.elements.appSelect.focus();
+                return;
+            }
+            
+            this.isConnecting = true;
+            this.updateConnectionState('connecting');
+            this.elements.castButton.textContent = 'Connecting...';
+            this.elements.castButton.disabled = true;
+            
+            try {
+                localStorage.setItem('selectedAppId', selectedAppId);
+                
+                this.castContext.setOptions({
+                    receiverApplicationId: selectedAppId,
+                    autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+                    resumeSavedSession: true
+                });
+                
+                await this.castContext.requestSession();
+                console.log('Cast session started successfully');
+                this.reconnectAttempts = 0;
+                
+            } catch (error) {
+                console.error('Error starting Cast session:', error);
+                this.handleConnectionError(error);
+            } finally {
+                this.isConnecting = false;
+                this.elements.castButton.disabled = false;
+            }
+        }
+        
+        disconnectFromDevice() {
+            if (this.castContext && this.currentSession) {
+                // Only disconnect if explicitly requested by user, not on page refresh
+                this.castContext.endCurrentSession(false);
+                this.updateConnectionState('disconnected');
+                console.log('Explicitly disconnected from session');
+            }
+        }
+        
+        handleSessionStateChanged(event) {
+            const stopButton = this.elements.stopButton;
+            
+            switch (event.sessionState) {
+                case cast.framework.SessionState.SESSION_STARTED:
+                    console.log('New session started');
+                    this.currentSession = this.castContext.getCurrentSession();
+                    if (this.currentSession) {
+                        this.attachToSession(this.currentSession);
+                        this.updateConnectionState('connected');
+                        this.elements.castButton.textContent = 'Disconnect';
+                        stopButton.style.display = 'block';
+                        this.startVolumeSync();
+                        this.showNotification('Connected to Chromecast device', 'success');
+                        this.reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+                    }
+                    break;
+                    
+                case cast.framework.SessionState.SESSION_RESUMED:
+                    console.log('Session resumed - maintaining playback');
+                    this.currentSession = this.castContext.getCurrentSession();
+                    if (this.currentSession) {
+                        this.attachToSession(this.currentSession);
+                        this.updateConnectionState('connected');
+                        this.elements.castButton.textContent = 'Disconnect';
+                        stopButton.style.display = 'block';
+                        this.startVolumeSync();
+                        // Don't show notification for resumed sessions to avoid spam
+                        console.log('Session successfully resumed without interrupting playback');
+                        this.reconnectAttempts = 0;
+                    }
+                    break;
+                    
+                case cast.framework.SessionState.SESSION_ENDED:
+                    console.log('Session ended by user or device');
+                    this.currentSession = null;
+                    this.updateConnectionState('disconnected');
+                    this.elements.castButton.textContent = 'Connect to Device';
+                    this.elements.volumeControl.disabled = true;
+                    stopButton.style.display = 'none';
+                    this.clearMediaInfo();
+                    this.stopVolumeSync();
+                    break;
+                    
+                case cast.framework.SessionState.NO_SESSION:
+                    console.log('No active session available');
+                    // Only update UI if we actually lost a session
+                    if (this.currentSession) {
+                        this.currentSession = null;
+                        this.updateConnectionState('disconnected');
+                        this.elements.castButton.textContent = 'Connect to Device';
+                        this.elements.volumeControl.disabled = true;
+                        stopButton.style.display = 'none';
+                        this.clearMediaInfo();
+                        this.stopVolumeSync();
+                    }
+                    break;
+            }
+        }
+        
+        handleCastStateChanged(event) {
+            console.log('Cast state changed:', event.castState);
+            
+            switch (event.castState) {
+                case cast.framework.CastState.NO_DEVICES_AVAILABLE:
+                    this.showNotification('No Chromecast devices found', 'warning');
+                    break;
+                case cast.framework.CastState.NOT_CONNECTED:
+                    if (this.connectionState === 'connected') {
+                        this.attemptReconnection();
+                    }
+                    break;
+            }
+        }
+        
+        attachToSession(session) {
+            this.currentSession = session;
+            console.log('Attaching to session:', session);
+            
+            try {
+                // Add session update listener for volume changes
+                if (typeof session.addUpdateListener === 'function') {
+                    session.addUpdateListener(() => {
+                        this.syncVolumeState();
+                    });
+                }
+                
+                // Check for media session and add listeners
+                this.setupMediaListeners(session);
+                
+                // Initial state sync
+                this.updateMediaInformation();
+                this.syncVolumeState();
+                this.elements.volumeControl.disabled = false;
+                
+            } catch (error) {
+                console.error('Error attaching to session:', error);
+                this.showNotification('Session attachment failed', 'error');
+            }
+        }
+        
+        setupMediaListeners(session) {
+            try {
+                // Try to get current media session
+                const mediaSession = session.getMediaSession ? session.getMediaSession() : null;
+                if (mediaSession && typeof mediaSession.addUpdateListener === 'function') {
+                    mediaSession.addUpdateListener(() => {
+                        this.updateMediaInformation();
+                    });
+                }
+                
+                // Listen for new media sessions
+                if (typeof session.addMediaListener === 'function') {
+                    session.addMediaListener((event) => {
+                        console.log('Media session event:', event);
+                        const newMediaSession = session.getMediaSession();
+                        if (newMediaSession && typeof newMediaSession.addUpdateListener === 'function') {
+                            newMediaSession.addUpdateListener(() => {
+                                this.updateMediaInformation();
+                            });
+                        }
+                        this.updateMediaInformation();
+                    });
+                }
+            } catch (error) {
+                console.error('Error setting up media listeners:', error);
+            }
+        }
+        
+        updateMediaInformation() {
+            if (!this.currentSession) return;
+            
+            const mediaSession = this.currentSession.getMediaSession();
+            
+            if (mediaSession && mediaSession.media && mediaSession.media.metadata) {
+                const metadata = mediaSession.media.metadata;
+                this.elements.mediaTitle.textContent = metadata.title || 'Unknown Title';
+                
+                if (metadata.images && metadata.images.length > 0) {
+                    this.elements.mediaImage.src = metadata.images[0].url;
+                    this.elements.mediaImage.classList.remove('hidden');
+                } else {
+                    this.elements.mediaImage.classList.add('hidden');
+                }
+            } else {
+                this.clearMediaInfo();
+            }
+        }
+        
+        clearMediaInfo() {
+            this.elements.mediaTitle.textContent = 'No media information';
+            this.elements.mediaImage.classList.add('hidden');
+        }
+        
+        syncVolumeState() {
+            if (!this.currentSession) return;
+            
+            try {
+                const currentVolume = Math.round(this.currentSession.getVolume() * 100);
+                const isMuted = this.currentSession.isMuted ? this.currentSession.isMuted() : currentVolume === 0;
+                
+                // Update volume slider and display
+                this.elements.volumeControl.value = currentVolume;
+                this.elements.volumeValue.textContent = currentVolume;
+                
+                // Update mute button state
+                if (isMuted && currentVolume === 0) {
+                    this.isMuted = true;
+                    this.elements.muteButton.textContent = '🔇';
+                    this.elements.muteButton.classList.remove('bg-gray-300', 'dark:bg-gray-600', 'text-gray-700', 'dark:text-gray-300');
+                    this.elements.muteButton.classList.add('bg-red-500', 'text-white');
+                } else {
+                    this.isMuted = false;
+                    this.elements.muteButton.textContent = '🔊';
+                    this.elements.muteButton.classList.remove('bg-red-500', 'text-white');
+                    this.elements.muteButton.classList.add('bg-gray-300', 'dark:bg-gray-600', 'text-gray-700', 'dark:text-gray-300');
+                }
+                
+                // Save volume state
+                if (currentVolume > 0) {
+                    localStorage.setItem('lastVolume', currentVolume.toString());
+                    this.lastVolume = currentVolume;
+                }
+                
+            } catch (error) {
+                console.error('Error syncing volume state:', error);
+            }
+        }
+        
+        handleVolumeChange(event) {
+            const volumeLevel = parseInt(event.target.value);
+            this.adjustVolume(volumeLevel);
+            this.elements.volumeValue.textContent = volumeLevel;
+            localStorage.setItem('lastVolume', volumeLevel.toString());
+            
+            // Update mute state if volume changed
+            if (volumeLevel > 0 && this.isMuted) {
+                this.isMuted = false;
+                this.elements.muteButton.textContent = '🔊';
+                this.elements.muteButton.classList.remove('bg-red-500', 'text-white');
+                this.elements.muteButton.classList.add('bg-gray-300', 'dark:bg-gray-600', 'text-gray-700', 'dark:text-gray-300');
+            }
+        }
+        
+        async adjustVolume(volumeLevel) {
+            if (!this.currentSession) {
+                console.log('No active Cast session');
+                return;
+            }
+            
+            try {
+                const normalizedVolume = volumeLevel / 100;
+                await this.currentSession.setVolume(normalizedVolume);
+                console.log('Volume set to', normalizedVolume);
+            } catch (error) {
+                console.error('Error setting volume:', error);
+                this.showNotification('Failed to adjust volume', 'error');
+                
+                if (error.code === 'session_error') {
+                    this.attemptReconnection();
                 }
             }
-        );
-    }
-
-    function updateMediaInformation(mediaSession) {
-        const mediaTitle = document.getElementById('mediaTitle');
-        const mediaImage = document.getElementById('mediaImage');
-
-        if (mediaSession && mediaSession.media && mediaSession.media.metadata) {
-            mediaTitle.textContent = mediaSession.media.metadata.title || 'Unknown Title';
-
-            if (mediaSession.media.metadata.images && mediaSession.media.metadata.images.length > 0) {
-                mediaImage.src = mediaSession.media.metadata.images[0].url;
-                mediaImage.classList.remove('hidden'); // Remove hidden class to show image
-            } else {
-                mediaImage.classList.add('hidden'); // Add hidden class to hide image
+        }
+        
+        stopMedia() {
+            if (!this.currentSession) {
+                console.log('No active Cast session');
+                return;
             }
-        } else {
-            mediaTitle.textContent = 'No media information';
-            mediaImage.classList.add('hidden');
+            
+            try {
+                this.currentSession.endSession(true);
+                this.elements.stopButton.style.display = 'none';
+                console.log('Media stopped');
+                this.showNotification('Media stopped', 'info');
+            } catch (error) {
+                console.error('Error stopping media:', error);
+                this.showNotification('Failed to stop media', 'error');
+            }
+        }
+        
+        toggleMute() {
+            if (!this.currentSession) return;
+            
+            try {
+                if (this.isMuted) {
+                    this.adjustVolume(this.lastVolume);
+                    this.isMuted = false;
+                    this.elements.muteButton.textContent = '🔊';
+                    this.elements.muteButton.classList.remove('bg-red-500', 'text-white');
+                    this.elements.muteButton.classList.add('bg-gray-300', 'dark:bg-gray-600', 'text-gray-700', 'dark:text-gray-300');
+                } else {
+                    this.lastVolume = parseInt(this.elements.volumeControl.value);
+                    this.adjustVolume(0);
+                    this.isMuted = true;
+                    this.elements.muteButton.textContent = '🔇';
+                    this.elements.muteButton.classList.remove('bg-gray-300', 'dark:bg-gray-600', 'text-gray-700', 'dark:text-gray-300');
+                    this.elements.muteButton.classList.add('bg-red-500', 'text-white');
+                }
+            } catch (error) {
+                console.error('Error toggling mute:', error);
+                this.showNotification('Failed to toggle mute', 'error');
+            }
+        }
+        
+        startHeartbeat() {
+            if (this.heartbeatInterval) {
+                clearInterval(this.heartbeatInterval);
+            }
+            
+            this.heartbeatInterval = setInterval(() => {
+                this.checkConnectionHealth();
+            }, 10000);
+        }
+        
+        checkConnectionHealth() {
+            if (this.currentSession) {
+                try {
+                    const volume = this.currentSession.getVolume();
+                    if (volume === undefined || volume === null) {
+                        console.warn('Session appears unhealthy, attempting reconnection');
+                        this.attemptReconnection();
+                    }
+                } catch (error) {
+                    console.warn('Session health check failed:', error);
+                    this.attemptReconnection();
+                }
+            }
+        }
+        
+        startVolumeSync() {
+            if (this.volumeSyncInterval) {
+                clearInterval(this.volumeSyncInterval);
+            }
+            
+            this.volumeSyncInterval = setInterval(() => {
+                this.syncVolumeState();
+            }, 5000);
+        }
+        
+        stopVolumeSync() {
+            if (this.volumeSyncInterval) {
+                clearInterval(this.volumeSyncInterval);
+                this.volumeSyncInterval = null;
+            }
+        }
+        
+        async attemptReconnection() {
+            if (this.reconnectAttempts >= this.maxReconnectAttempts || this.isConnecting) {
+                return;
+            }
+            
+            this.reconnectAttempts++;
+            console.log(`Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+            
+            this.showNotification(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`, 'info');
+            
+            await this.delay(this.reconnectDelay * this.reconnectAttempts);
+            
+            try {
+                await this.connectToDevice();
+            } catch (error) {
+                console.error('Reconnection attempt failed:', error);
+                
+                if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+                    this.showNotification('Failed to reconnect. Please try manually.', 'error');
+                    this.updateConnectionState('failed');
+                }
+            }
+        }
+        
+        async refreshSession() {
+            if (this.castContext) {
+                try {
+                    const session = this.castContext.getCurrentSession();
+                    if (session) {
+                        if (session !== this.currentSession) {
+                            console.log('Refreshing session after visibility change');
+                            this.attachToSession(session);
+                            this.updateConnectionState('connected');
+                        } else {
+                            // Session is the same, just sync state
+                            this.syncVolumeState();
+                            this.updateMediaInformation();
+                        }
+                    } else if (this.currentSession) {
+                        // Lost session, try to reconnect
+                        console.log('Session lost during page switch, attempting reconnection');
+                        this.attemptReconnection();
+                    }
+                } catch (error) {
+                    console.error('Error refreshing session:', error);
+                }
+            }
+        }
+        
+        handleNetworkOnline() {
+            console.log('Network connection restored');
+            this.showNotification('Network restored', 'success');
+            
+            setTimeout(() => {
+                if (this.connectionState === 'connected' && !this.currentSession) {
+                    this.attemptReconnection();
+                }
+            }, 2000);
+        }
+        
+        handleNetworkOffline() {
+            console.log('Network connection lost');
+            this.showNotification('Network connection lost', 'warning');
+        }
+        
+        handleConnectionError(error) {
+            console.error('Connection error:', error);
+            
+            let message = 'Connection failed';
+            if (error.code === 'cancel') {
+                message = 'Connection cancelled';
+            } else if (error.code === 'timeout') {
+                message = 'Connection timed out';
+            } else if (error.code === 'receiver_unavailable') {
+                message = 'Device unavailable';
+            }
+            
+            this.showNotification(message, 'error');
+            this.updateConnectionState('failed');
+            this.elements.castButton.textContent = 'Connect to Device';
+        }
+        
+        updateConnectionState(state) {
+            this.connectionState = state;
+            
+            const statusMessages = {
+                'connecting': 'Connecting to device...',
+                'connected': 'Connected successfully',
+                'disconnected': 'Not connected',
+                'failed': 'Connection failed'
+            };
+            
+            const statusStyles = {
+                'connecting': 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
+                'connected': 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
+                'disconnected': 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
+                'failed': 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+            };
+            
+            this.elements.statusText.textContent = statusMessages[state] || 'Unknown status';
+            this.elements.connectionStatus.className = `mb-4 p-3 rounded-lg text-center ${statusStyles[state]}`;
+            this.elements.connectionStatus.classList.remove('hidden');
+            
+            switch (state) {
+                case 'connecting':
+                    this.elements.castButton.classList.add('opacity-50');
+                    this.elements.volumeControl.disabled = true;
+                    this.elements.muteButton.disabled = true;
+                    break;
+                case 'connected':
+                    this.elements.castButton.classList.remove('opacity-50');
+                    this.elements.volumeControl.disabled = false;
+                    this.elements.muteButton.disabled = false;
+                    setTimeout(() => {
+                        this.elements.connectionStatus.classList.add('hidden');
+                    }, 3000);
+                    break;
+                case 'disconnected':
+                case 'failed':
+                    this.elements.castButton.classList.remove('opacity-50');
+                    this.elements.volumeControl.disabled = true;
+                    this.elements.muteButton.disabled = true;
+                    break;
+            }
+        }
+        
+        showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${this.getNotificationStyles(type)}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('opacity-0', 'translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+        
+        getNotificationStyles(type) {
+            const styles = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                warning: 'bg-yellow-500 text-black',
+                info: 'bg-blue-500 text-white'
+            };
+            return styles[type] || styles.info;
+        }
+        
+        delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        destroy() {
+            // Clean up intervals
+            if (this.heartbeatInterval) {
+                clearInterval(this.heartbeatInterval);
+            }
+            if (this.volumeSyncInterval) {
+                clearInterval(this.volumeSyncInterval);
+            }
+            
+            // DO NOT disconnect session on page unload - let it continue playing
+            // Only clean up local references
+            console.log('Cleaning up controller, keeping session alive');
         }
     }
-
-
-    function adjustVolume(volumeLevel) {
-        const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
-        if (castSession) {
-            // Normalize volume level to a value between 0.0 and 1.0
-            let normalizedVolume = volumeLevel / 100;
-
-            castSession.setVolume(normalizedVolume).then(
-                () => console.log('Volume set to ' + normalizedVolume),
-                (error) => console.error('Error setting volume:', error)
-            );
-        } else {
-            console.log('No active Cast session');
-        }
-    }
-
-    document.getElementById('volumeControl').addEventListener('input', function (event) {
-        adjustVolume(event.target.value);
-        document.getElementById('volumeValue').textContent = event.target.value;
+    
+    let castController;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        castController = new CastVolumeController();
     });
-
-    // Event listener for stop button click
-    document.getElementById('stopButton').addEventListener('click', stopMedia);
-
-    function stopMedia() {
-        const castSession = cast.framework.CastContext.getInstance().getCurrentSession();
-        if (castSession) {
-            castSession.endSession(true);
-            document.getElementById('stopButton').style.display = 'none';
-            console.log('Media stopped');
-        } else {
-            console.log('No active Cast session');
+    
+    // Clean up on page unload but DON'T disconnect the cast session
+    window.addEventListener('beforeunload', () => {
+        if (castController) {
+            castController.destroy();
         }
-    }
-
+    });
+    
+    // Handle page visibility changes to restore sessions
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && castController) {
+            // Page became visible again, refresh session
+            setTimeout(() => {
+                castController.refreshSession();
+            }, 100);
+        }
+    });
 </script>
 <script>
     if ('serviceWorker' in navigator) {
